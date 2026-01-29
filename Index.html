@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monster Chase</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.3s;
+            overflow: hidden;
+            cursor: none;
+        }
+
+        body.safe {
+            background-color: #90EE90;
+        }
+
+        body.danger {
+            background-color: #9370DB;
+        }
+
+        body.caught {
+            background-color: #FF4444;
+        }
+
+        #gameBox {
+            width: 600px;
+            height: 600px;
+            border: 12px solid;
+            position: relative;
+            transition: border-color 0.3s;
+        }
+
+        #gameBox.safe {
+            border-color: #FFD700;
+        }
+
+        #gameBox.danger {
+            border-color: #4169E1;
+        }
+
+        #gameBox.caught {
+            border-color: #8B0000;
+        }
+
+        #gameBox.escape {
+            border-top-color: transparent;
+        }
+
+        #gameBox.escape::before,
+        #gameBox.escape::after {
+            content: '';
+            position: absolute;
+            top: -12px;
+            height: 12px;
+            background-color: #FFD700;
+        }
+
+        #gameBox.escape::before {
+            left: -12px;
+            width: calc(33.33% + 12px);
+        }
+
+        #gameBox.escape::after {
+            right: -12px;
+            width: calc(33.33% + 12px);
+        }
+
+        #startButton {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            font-size: 24px;
+            font-weight: bold;
+            background-color: #FFD700;
+            border: 3px solid #333;
+            border-radius: 10px;
+            transition: opacity 0.5s;
+            z-index: 10;
+        }
+
+        #startButton:hover {
+            background-color: #FFC700;
+        }
+
+        #startButton.fade {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #monster {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            display: none;
+            transform: translate(-50%, -50%);
+            transition: none;
+            z-index: 5;
+        }
+
+        #monster.active {
+            display: block;
+        }
+
+        /* Monster image */
+        #monster::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('2c0305d7bd379bd.png') center/contain no-repeat;
+        }
+
+        #cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border: 2px solid #333;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 100;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body class="safe">
+    <div id="gameBox" class="safe">
+        <button id="startButton">START</button>
+        <div id="monster"></div>
+    </div>
+    <div id="cursor"></div>
+
+    <script>
+        const gameBox = document.getElementById('gameBox');
+        const startButton = document.getElementById('startButton');
+        const monster = document.getElementById('monster');
+        const cursor = document.getElementById('cursor');
+        const body = document.body;
+
+        let gameState = 'waiting'; // waiting, playing, caught, escaped
+        let monsterX = 0;
+        let monsterY = 0;
+        let mouseX = 0;
+        let mouseY = 0;
+        let monsterSpeed = 1;
+        let cursorLocked = true;
+        let boxRect;
+        let animationId;
+        let prevMouseX = 0;
+        let prevMouseY = 0;
+
+        // Update box rect
+        function updateBoxRect() {
+            boxRect = gameBox.getBoundingClientRect();
+        }
+        updateBoxRect();
+        window.addEventListener('resize', updateBoxRect);
+
+        // Mouse tracking
+        document.addEventListener('mousemove', (e) => {
+            prevMouseX = mouseX;
+            prevMouseY = mouseY;
+            
+            let x = e.clientX;
+            let y = e.clientY;
+            
+            // Check if escaped and trying to exit through the gap
+            if (gameState === 'escaped' && cursorLocked) {
+                const gapStart = boxRect.left + (boxRect.width * 0.3333);
+                const gapEnd = boxRect.left + (boxRect.width * 0.6666);
+                
+                // If above the box and within the gap, unlock cursor permanently
+                if (y < boxRect.top && x >= gapStart && x <= gapEnd) {
+                    cursorLocked = false;
+                }
+            }
+            
+            // Constrain cursor to box if still locked
+            if (cursorLocked) {
+                x = Math.max(boxRect.left, Math.min(boxRect.right, x));
+                y = Math.max(boxRect.top, Math.min(boxRect.bottom, y));
+            }
+            
+            mouseX = x - boxRect.left;
+            mouseY = y - boxRect.top;
+            
+            cursor.style.left = x + 'px';
+            cursor.style.top = y + 'px';
+        });
+
+        // Start button
+        startButton.addEventListener('click', () => {
+            startButton.classList.add('fade');
+            
+            setTimeout(() => {
+                startButton.style.display = 'none';
+                startGame();
+            }, 500);
+        });
+
+        function startGame() {
+            gameState = 'playing';
+            
+            // Change to danger mode - PURPLE background, BLUE border
+            body.className = 'danger';
+            gameBox.className = 'danger';
+            
+            // Spawn monster at random edge
+            const edge = Math.floor(Math.random() * 4);
+            const boxWidth = boxRect.width;
+            const boxHeight = boxRect.height;
+            
+            switch(edge) {
+                case 0: // top
+                    monsterX = Math.random() * boxWidth;
+                    monsterY = 0;
+                    break;
+                case 1: // right
+                    monsterX = boxWidth;
+                    monsterY = Math.random() * boxHeight;
+                    break;
+                case 2: // bottom
+                    monsterX = Math.random() * boxWidth;
+                    monsterY = boxHeight;
+                    break;
+                case 3: // left
+                    monsterX = 0;
+                    monsterY = Math.random() * boxHeight;
+                    break;
+            }
+            
+            monster.classList.add('active');
+            monsterSpeed = 1;
+            
+            gameLoop();
+        }
+
+        function gameLoop() {
+            if (gameState !== 'playing') return;
+            
+            // Calculate distance to cursor
+            const dx = mouseX - monsterX;
+            const dy = mouseY - monsterY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Calculate cursor velocity (direction it's moving)
+            const velX = mouseX - prevMouseX;
+            const velY = mouseY - prevMouseY;
+            
+            // Check if cursor is moving towards monster
+            // Dot product of velocity and direction to monster
+            const toMonsterX = monsterX - mouseX;
+            const toMonsterY = monsterY - mouseY;
+            const dotProduct = velX * toMonsterX + velY * toMonsterY;
+            
+            // Check for collision while moving towards monster
+            if (distance < 50 && dotProduct > 0) {
+                // Player wins - attacked the monster!
+                gameState = 'escaped';
+                winGame();
+                return;
+            }
+            
+            // Move monster towards cursor
+            if (distance > 0) {
+                monsterX += (dx / distance) * monsterSpeed;
+                monsterY += (dy / distance) * monsterSpeed;
+            }
+            
+            // Update monster position
+            monster.style.left = monsterX + 'px';
+            monster.style.top = monsterY + 'px';
+            
+            // Gradually increase speed
+            monsterSpeed += 0.01;
+            
+            // Check if caught by monster (monster catches cursor)
+            if (distance < 30) {
+                gameState = 'caught';
+                loseGame();
+                return;
+            }
+            
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function loseGame() {
+            // Caught by monster - RED background and border
+            body.className = 'caught';
+            gameBox.className = 'caught';
+            // Keep monster visible at the position where it caught you
+            // monster.classList.remove('active'); // DON'T remove - keep it visible
+            
+            // Hide cursor - game over, must reload page
+            cursor.style.display = 'none';
+            document.body.style.cursor = 'none';
+        }
+
+        function winGame() {
+            // Return to safe mode - GREEN background, YELLOW border
+            body.className = 'safe';
+            gameBox.className = 'safe escape';
+            monster.classList.remove('active');
+            // Cursor stays locked until player exits through the gap
+        }
+
+    </script>
+</body>
+</html>
