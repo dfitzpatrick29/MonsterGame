@@ -116,6 +116,10 @@
             display: block;
         }
 
+        #monster.flipped {
+            transform: translate(-50%, -50%) scaleX(-1);
+        }
+
         /* Monster image */
         #monster::before {
             content: '';
@@ -298,6 +302,15 @@
             if (distance > 0) {
                 monsterX += (dx / distance) * monsterSpeed;
                 monsterY += (dy / distance) * monsterSpeed;
+                
+                // Flip monster sprite based on horizontal movement direction
+                if (dx > 0) {
+                    // Moving right - flip the sprite
+                    monster.classList.add('flipped');
+                } else {
+                    // Moving left or down - normal orientation
+                    monster.classList.remove('flipped');
+                }
             }
             
             // Update monster position
