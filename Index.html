@@ -141,8 +141,8 @@
 
         #smileyFace {
             position: fixed;
-            width: 100px;
-            height: 100px;
+            width: 150px;
+            height: 150px;
             background: url('SmilyFace.png') center/contain no-repeat;
             display: none;
             z-index: 50;
@@ -339,8 +339,8 @@
             // Show smiley face to the left of the box, centered between border and screen edge
             updateBoxRect();
             const distanceToEdge = boxRect.left; // distance from screen edge to box
-            const smileyLeft = (distanceToEdge / 2) - 50; // center it, accounting for 100px width
-            const smileyTop = boxRect.top + (boxRect.height / 2) - 50; // centered vertically
+            const smileyLeft = (distanceToEdge / 2) - 75; // center it, accounting for 150px width
+            const smileyTop = boxRect.top + (boxRect.height / 2) - 75; // centered vertically with 150px height
             
             smileyFace.style.left = smileyLeft + 'px';
             smileyFace.style.top = smileyTop + 'px';
