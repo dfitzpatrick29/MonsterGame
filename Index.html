@@ -86,10 +86,11 @@
             font-size: 24px;
             font-weight: bold;
             background-color: #FFD700;
-            border: 3px solid #333;
+            border: none;
             border-radius: 10px;
             transition: opacity 0.5s;
             z-index: 10;
+            color: white;
         }
 
         #startButton:hover {
@@ -137,6 +138,20 @@
             z-index: 100;
             transform: translate(-50%, -50%);
         }
+
+        #smileyFace {
+            position: fixed;
+            width: 100px;
+            height: 100px;
+            background: url('SmilyFace.png') center/contain no-repeat;
+            display: none;
+            z-index: 50;
+            pointer-events: auto;
+        }
+
+        #smileyFace.show {
+            display: block;
+        }
     </style>
 </head>
 <body class="safe">
@@ -144,6 +159,7 @@
         <button id="startButton">START</button>
         <div id="monster"></div>
     </div>
+    <div id="smileyFace"></div>
     <div id="cursor"></div>
 
     <script>
@@ -152,6 +168,7 @@
         const monster = document.getElementById('monster');
         const cursor = document.getElementById('cursor');
         const body = document.body;
+        const smileyFace = document.getElementById('smileyFace');
 
         let gameState = 'waiting'; // waiting, playing, caught, escaped
         let monsterX = 0;
@@ -318,6 +335,25 @@
             gameBox.className = 'safe escape';
             monster.classList.remove('active');
             // Cursor stays locked until player exits through the gap
+            
+            // Show smiley face to the left of the box, centered between border and screen edge
+            updateBoxRect();
+            const distanceToEdge = boxRect.left; // distance from screen edge to box
+            const smileyLeft = (distanceToEdge / 2) - 50; // center it, accounting for 100px width
+            const smileyTop = boxRect.top + (boxRect.height / 2) - 50; // centered vertically
+            
+            smileyFace.style.left = smileyLeft + 'px';
+            smileyFace.style.top = smileyTop + 'px';
+            smileyFace.classList.add('show');
+            
+            // Add hover listeners to switch between smiley face and thumbs up
+            smileyFace.addEventListener('mouseenter', () => {
+                smileyFace.style.backgroundImage = "url('thumbsup.png')";
+            });
+            
+            smileyFace.addEventListener('mouseleave', () => {
+                smileyFace.style.backgroundImage = "url('SmilyFace.png')";
+            });
         }
 
     </script>
